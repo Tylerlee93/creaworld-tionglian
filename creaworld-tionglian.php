@@ -7,7 +7,7 @@
  * Author URI:      https://www.creaworld.com.sg
  * Text Domain:     creaworld-eshop
  * Domain Path:     /languages
- * Version:         1.0.0 
+ * Version:         1.0.1
  *
  * @package         Creaworld_TiongLian
  */
@@ -326,10 +326,13 @@ class Creaworld_TiongLian {
             $lines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $specific_holidays_string))); // Explode by newline
             // --- END REVERTED PARSING ---
             foreach ($lines as $line) { // Use $line instead of $date_str for clarity
-                if (preg_match("/^\d{4}-\d{2}-\d{2}$/", $line)) {
-                    $d = DateTime::createFromFormat('Y-m-d', $line);
-                    if ($d && $d->format('Y-m-d') === $line) {
-                        $processed_holidays[] = $line;
+                // Sanitize: Remove invisible characters (like zero-width spaces) often copied from web
+                $clean_line = preg_replace('/[^\d-]/', '', $line);
+
+                if (preg_match("/^\d{4}-\d{2}-\d{2}$/", $clean_line)) {
+                    $d = DateTime::createFromFormat('Y-m-d', $clean_line);
+                    if ($d && $d->format('Y-m-d') === $clean_line) {
+                        $processed_holidays[] = $clean_line;
                     } else {
                          error_log("Creaworld TiongLian - Invalid specific holiday date format ignored: " . $line);
                     }
@@ -390,9 +393,6 @@ class Creaworld_TiongLian {
             // --- End Configuration ---
 
             // --- Calculation Logic ---
-            $now = current_time('timestamp');
-            $order_date = new DateTime("@$now");
-            $order_date->setTimezone($timezone);
             $order_date = new DateTime('now', $timezone);
             $order_date_ymd = $order_date->format('Y-m-d');
 
