@@ -7,7 +7,7 @@
  * Author URI:      https://www.creaworld.com.sg
  * Text Domain:     creaworld-eshop
  * Domain Path:     /languages
- * Version:         1.0.1
+ * Version:         1.0.2
  *
  * @package         Creaworld_TiongLian
  */
@@ -84,7 +84,8 @@ class Creaworld_TiongLian {
 
         // 2. ADD our custom version of the filter from *this* plugin (Creaworld_TiongLian)
         add_filter( 'wp_get_nav_menu_items', array( $this, 'inject_product_cate_into_menu' ), 10, 3 );
-
+        add_action('woocommerce_email_after_order_table', array( $this,'show_coupon_in_email'), 30, 4);
+       
     }
 
     /**
@@ -1139,7 +1140,12 @@ class Creaworld_TiongLian {
 
 
     // --- END: Product Category Menu Injection ---
-
+    function show_coupon_in_email($order, $sent_to_admin, $plain_text, $email) {
+            $coupons = $order->get_coupon_codes();
+            if (!empty($coupons)) {
+                echo '<p><strong>Discount Code Used:</strong> ' . implode(', ', $coupons) . '</p>';
+            }
+        }
     
 } // End class Creaworld_TiongLian
 
