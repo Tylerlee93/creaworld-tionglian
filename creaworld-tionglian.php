@@ -7,7 +7,7 @@
  * Author URI:      https://www.creaworld.com.sg
  * Text Domain:     creaworld-eshop
  * Domain Path:     /languages
- * Version:         1.0.2
+ * Version:         1.0.3
  *
  * @package         Creaworld_TiongLian
  */
@@ -32,6 +32,20 @@ class Creaworld_TiongLian {
     const SETTINGS_OPTION_NAME = 'creaworld_tionglian_delivery_settings';
     // Define the settings tab ID
     const SETTINGS_TAB_ID = 'tionglian_delivery';
+
+    // Debug mode constant - set to false to disable all error logging
+    const DEBUG_MODE = false;
+
+    /**
+     * Wrapper function for error logging that respects DEBUG_MODE
+     * 
+     * @param string $message The message to log
+     */
+    private function debug_log($message) {
+        if (self::DEBUG_MODE) {
+            error_log($message);
+        }
+    }
 
     public function __construct() {
         // Keep existing filters if needed
@@ -71,21 +85,20 @@ class Creaworld_TiongLian {
                     10 // The priority
                 );
                 if ($removed) {
-                    error_log("Creaworld TiongLian: Successfully removed original inject_product_cate_into_menu filter.");
+                    $this->debug_log("Creaworld TiongLian: Successfully removed original inject_product_cate_into_menu filter.");
                 } else {
-                    error_log("Creaworld TiongLian: FAILED to remove original inject_product_cate_into_menu filter (maybe priority mismatch or already removed?).");
+                    $this->debug_log("Creaworld TiongLian: FAILED to remove original inject_product_cate_into_menu filter (maybe priority mismatch or already removed?).");
                 }
             } else {
-                 error_log("Creaworld TiongLian: Could not get FrontendManager instance or method inject_product_cate_into_menu not found.");
+                 $this->debug_log("Creaworld TiongLian: Could not get FrontendManager instance or method inject_product_cate_into_menu not found.");
             }
         } else {
-             error_log("Creaworld TiongLian: Creaworld_Eshop\Frontend\FrontendManager class not found. Cannot remove original filter.");
+             $this->debug_log("Creaworld TiongLian: Creaworld_Eshop\Frontend\FrontendManager class not found. Cannot remove original filter.");
         }
 
         // 2. ADD our custom version of the filter from *this* plugin (Creaworld_TiongLian)
         add_filter( 'wp_get_nav_menu_items', array( $this, 'inject_product_cate_into_menu' ), 10, 3 );
-        add_action('woocommerce_email_after_order_table', array( $this,'show_coupon_in_email'), 30, 4);
-       
+
     }
 
     /**
@@ -127,9 +140,9 @@ class Creaworld_TiongLian {
                     // If a minimum amount is set and the cart subtotal is less than it, hide local pickup
                     if ( $min_amount_for_pickup !== null && $cart_subtotal < $min_amount_for_pickup ) {
                         unset( $rates[ $rate_id ] );
-                        error_log("TiongLian: Hiding Local Pickup ($rate_id). Cart subtotal: $cart_subtotal, Min amount for pickup: $min_amount_for_pickup");
+                        $this->debug_log("TiongLian: Hiding Local Pickup ($rate_id). Cart subtotal: $cart_subtotal, Min amount for pickup: $min_amount_for_pickup");
                     } else {
-                        error_log("TiongLian: Showing Local Pickup ($rate_id). Cart subtotal: $cart_subtotal, Min amount for pickup: " . ($min_amount_for_pickup ?? 'Not set or not applicable'));
+                        $this->debug_log("TiongLian: Showing Local Pickup ($rate_id). Cart subtotal: $cart_subtotal, Min amount for pickup: " . ($min_amount_for_pickup ?? 'Not set or not applicable'));
                     }
                 }
             }
@@ -335,10 +348,10 @@ class Creaworld_TiongLian {
                     if ($d && $d->format('Y-m-d') === $clean_line) {
                         $processed_holidays[] = $clean_line;
                     } else {
-                         error_log("Creaworld TiongLian - Invalid specific holiday date format ignored: " . $line);
+                         $this->debug_log("Creaworld TiongLian - Invalid specific holiday date format ignored: " . $line);
                     }
                 } else {
-                     error_log("Creaworld TiongLian - Invalid specific holiday date format ignored: " . $line);
+                     $this->debug_log("Creaworld TiongLian - Invalid specific holiday date format ignored: " . $line);
                 }
             }
         }
@@ -358,7 +371,7 @@ class Creaworld_TiongLian {
                     $date_str_next = $next_year . '-' . $month_day;
                     $d_next = DateTime::createFromFormat('Y-m-d', $date_str_next);
                     if ($d_next && $d_next->format('Y-m-d') === $date_str_next) { $processed_holidays[] = $date_str_next; }
-                } else { error_log("Creaworld TiongLian - Invalid recurring holiday format ignored: " . $line); }
+                } else { $this->debug_log("Creaworld TiongLian - Invalid recurring holiday format ignored: " . $line); }
             }
         }
 
@@ -459,7 +472,7 @@ class Creaworld_TiongLian {
             return $this->delivery_options;
 
         } catch (Exception $e) {
-            error_log("Error calculating delivery date options: " . $e->getMessage());
+            $this->debug_log("Error calculating delivery date options: " . $e->getMessage());
             $this->delivery_options = false; // Mark calculation as failed
             return null;
         }
@@ -548,10 +561,10 @@ class Creaworld_TiongLian {
                  wp_add_inline_script($script_handle, $script);
             } else {
                  wp_add_inline_script('jquery-core', $script);
-                 error_log('Creaworld TiongLian: jquery-ui-datepicker was not enqueued when trying to add inline script.');
+                 $this->debug_log('Creaworld TiongLian: jquery-ui-datepicker was not enqueued when trying to add inline script.');
             }
         } else {
-             error_log('Creaworld TiongLian: No delivery options calculated, datepicker script not added.');
+             $this->debug_log('Creaworld TiongLian: No delivery options calculated, datepicker script not added.');
         }
     }
 
@@ -561,12 +574,12 @@ class Creaworld_TiongLian {
      * Add the delivery date field to the checkout page. (MODIFIED)
      */
     public function add_delivery_date_checkout_field( $checkout ) {
-        error_log("--- add_delivery_date_checkout_field RUNNING ---");
+        $this->debug_log("--- add_delivery_date_checkout_field RUNNING ---");
         echo '<div id="' . esc_attr(self::DELIVERY_DATE_META_KEY) . '_field_container" class="creaworld-checkout-field" style="clear:both; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">';
         echo '<h3>' . esc_html__('Delivery Information', 'creaworld-eshop') . '</h3>';
 
         $options = $this->get_delivery_date_options();
-        error_log("Delivery Options in add_delivery_date_checkout_field: " . var_export($options, true));
+        $this->debug_log("Delivery Options in add_delivery_date_checkout_field: " . var_export($options, true));
 
         if ($options && isset($options['min_date'])) {
             woocommerce_form_field( self::DELIVERY_DATE_META_KEY, array(
@@ -582,7 +595,7 @@ class Creaworld_TiongLian {
                 'id'            => self::DELIVERY_DATE_META_KEY
             ), $checkout->get_value( self::DELIVERY_DATE_META_KEY ) ?: $options['min_date']);
 
-             error_log("Rendering delivery date field. Min: {$options['min_date']}, Max: {$options['max_date']}");
+             $this->debug_log("Rendering delivery date field. Min: {$options['min_date']}, Max: {$options['max_date']}");
              // --- Generate Dynamic Delivery Note (organized into separate lines) ---
              $settings = get_option(self::SETTINGS_OPTION_NAME, []);
              $allowed_days_num = isset($settings['allowed_days']) && is_array($settings['allowed_days']) ? array_map('intval', $settings['allowed_days']) : [2, 4, 6];
@@ -634,7 +647,7 @@ class Creaworld_TiongLian {
            
 
         } else {
-            error_log("No delivery options calculated, showing error message.");
+            $this->debug_log("No delivery options calculated, showing error message.");
             echo '<p class="woocommerce-error">' . esc_html__('Delivery date/time cannot be determined at this time. Please contact us.', 'creaworld-eshop') . '</p>';
         }
         echo '</div>';
@@ -683,7 +696,7 @@ class Creaworld_TiongLian {
 
             } catch (Exception $e) {
                  wc_add_notice( __( 'There was an error validating the delivery date.', 'creaworld-eshop' ), 'error' );
-                 error_log("Error validating delivery date: " . $e->getMessage());
+                 $this->debug_log("Error validating delivery date: " . $e->getMessage());
                  return;
             }
 
@@ -713,13 +726,13 @@ class Creaworld_TiongLian {
          $date_meta_key = self::DELIVERY_DATE_META_KEY;
          $time_meta_key = self::DELIVERY_TIME_SLOT_META_KEY;
  
-         error_log("--- save_delivery_date_order_meta RUNNING for Order ID: " . $order_id); // Log 1: Did the function run?
+         $this->debug_log("--- save_delivery_date_order_meta RUNNING for Order ID: " . $order_id); // Log 1: Did the function run?
  
          // Log the relevant part of the posted data
          if (isset($posted_data[$date_meta_key])) { // <-- Use $date_meta_key
-             error_log("Posted Data [{$date_meta_key}]: " . print_r($posted_data[$date_meta_key], true)); // Log 2: What value was posted?
+             $this->debug_log("Posted Data [{$date_meta_key}]: " . print_r($posted_data[$date_meta_key], true)); // Log 2: What value was posted?
          } else {
-             error_log("Posted Data [{$date_meta_key}] is NOT SET."); // Log 3: Was the field even posted?
+             $this->debug_log("Posted Data [{$date_meta_key}] is NOT SET."); // Log 3: Was the field even posted?
          }
  
          // Check if the key exists and the value is not empty
@@ -727,24 +740,24 @@ class Creaworld_TiongLian {
              $selected_date = sanitize_text_field( $posted_data[$date_meta_key] );
          } elseif ( isset( $_POST[$date_meta_key] ) && ! empty( $_POST[$date_meta_key] ) ) {
              $selected_date = sanitize_text_field( $_POST[$date_meta_key] );
-             error_log("Posted Data found in \ for key {$date_meta_key}: " . $selected_date);
+             $this->debug_log("Posted Data found in \ for key {$date_meta_key}: " . $selected_date);
          } else {
              $selected_date = null;
          }
  
          if ($selected_date) {
-             error_log("Sanitized Date: " . $selected_date); // Log 4: What does it look like after sanitizing?
+             $this->debug_log("Sanitized Date: " . $selected_date); // Log 4: What does it look like after sanitizing?
  
              // Validate format
              if ( preg_match("/^\d{4}-\d{2}-\d{2}$/", $selected_date) ) {
-                 error_log("Date format VALID. Saving meta..."); // Log 5a: Did validation pass?
+                 $this->debug_log("Date format VALID. Saving meta..."); // Log 5a: Did validation pass?
                  // Use update_post_meta which is standard for post meta
                  update_post_meta( $order_id, $date_meta_key, $selected_date );
                  // Verify if meta was saved (optional check)
                  $saved_value = get_post_meta($order_id, $date_meta_key, true);
-                 error_log("update_post_meta called for key: " . $date_meta_key . " with value: " . $selected_date . ". Value after save: " . $saved_value); // Log 6: Did we attempt to save & verify?
+                 $this->debug_log("update_post_meta called for key: " . $date_meta_key . " with value: " . $selected_date . ". Value after save: " . $saved_value); // Log 6: Did we attempt to save & verify?
              } else {
-                 error_log("Date format INVALID: " . $selected_date); // Log 5b: Did validation fail?
+                 $this->debug_log("Date format INVALID: " . $selected_date); // Log 5b: Did validation fail?
                  $order = wc_get_order($order_id);
                  if ($order) $order->add_order_note( sprintf( __('Invalid delivery date format received: %s', 'creaworld-eshop'), $selected_date ) );
              }
@@ -995,7 +1008,7 @@ class Creaworld_TiongLian {
             $request_id = uniqid('req_', true);
         }
         $menu_identifier = "Menu Name: " . ($menu->name ?? 'N/A') . " | Slug: " . ($menu->slug ?? 'N/A') . " | Location: " . ($args->theme_location ?? 'N/A');
-        error_log("[$request_id] --- inject_product_cate_into_menu START --- $menu_identifier");
+        $this->debug_log("[$request_id] --- inject_product_cate_into_menu START --- $menu_identifier");
         // --- END DEBUGGING ---
         // don't add child categories in administration of menus
         if ( is_admin() ) {
@@ -1031,7 +1044,7 @@ class Creaworld_TiongLian {
             }
 
             // --- ADDED DEBUGGING FOR PLACEHOLDER FOUND ---
-            error_log("[$request_id] >>> Found placeholder 'eshop_product_cate_main' in Item ID: " . ($i->ID ?? 'N/A') . " within $menu_identifier");
+            $this->debug_log("[$request_id] >>> Found placeholder 'eshop_product_cate_main' in Item ID: " . ($i->ID ?? 'N/A') . " within $menu_identifier");
             // --- END DEBUGGING ---
 
             $hide_empty = true;
@@ -1044,11 +1057,11 @@ class Creaworld_TiongLian {
             $terms       = get_terms( $terms_args );
 
             if (is_wp_error($terms) || empty($terms)) {
-                error_log("[$request_id] --- No top-level terms found or WP_Error for placeholder Item ID: " . ($i->ID ?? 'N/A')); // Debugging
+                $this->debug_log("[$request_id] --- No top-level terms found or WP_Error for placeholder Item ID: " . ($i->ID ?? 'N/A')); // Debugging
                 continue; // Skip if no terms found
             }
 
-            error_log("[$request_id] --- Processing " . count($terms) . " top-level terms for placeholder Item ID: " . ($i->ID ?? 'N/A')); // Debugging
+            $this->debug_log("[$request_id] --- Processing " . count($terms) . " top-level terms for placeholder Item ID: " . ($i->ID ?? 'N/A')); // Debugging
 
             foreach ( $terms as $term ) {
                 // 1. Create the main parent menu item
@@ -1066,7 +1079,7 @@ class Creaworld_TiongLian {
                 // 3. If children exist, add the workaround link and the actual children
                 if ( ! is_wp_error($terms_child) && ! empty( $terms_child ) ) {
 
-                    error_log("[$request_id] --- Found " . count($terms_child) . " child terms for Term ID: " . $term->term_id . " (Name: " . $term->name . ")"); // Debugging
+                    $this->debug_log("[$request_id] --- Found " . count($terms_child) . " child terms for Term ID: " . $term->term_id . " (Name: " . $term->name . ")"); // Debugging
 
                     // *** ADDED WORKAROUND LINK ***
                     $view_parent_item = $this->custom_nav_menu_item(
@@ -1091,13 +1104,13 @@ class Creaworld_TiongLian {
                         $ctr ++;
                     }
                 } else {
-                     error_log("[$request_id] --- No child terms found (or WP_Error) for Term ID: " . $term->term_id . " (Name: " . $term->name . ")"); // Debugging
+                     $this->debug_log("[$request_id] --- No child terms found (or WP_Error) for Term ID: " . $term->term_id . " (Name: " . $term->name . ")"); // Debugging
                 }
             }
-             error_log("[$request_id] <<< Finished adding categories for placeholder Item ID: " . ($i->ID ?? 'N/A')); // Debugging
+             $this->debug_log("[$request_id] <<< Finished adding categories for placeholder Item ID: " . ($i->ID ?? 'N/A')); // Debugging
         }
 
-         error_log("[$request_id] --- inject_product_cate_into_menu END --- $menu_identifier"); // Debugging
+         $this->debug_log("[$request_id] --- inject_product_cate_into_menu END --- $menu_identifier"); // Debugging
 
         return $items;
     }
@@ -1140,12 +1153,7 @@ class Creaworld_TiongLian {
 
 
     // --- END: Product Category Menu Injection ---
-    function show_coupon_in_email($order, $sent_to_admin, $plain_text, $email) {
-            $coupons = $order->get_coupon_codes();
-            if (!empty($coupons)) {
-                echo '<p><strong>Discount Code Used:</strong> ' . implode(', ', $coupons) . '</p>';
-            }
-        }
+
     
 } // End class Creaworld_TiongLian
 
